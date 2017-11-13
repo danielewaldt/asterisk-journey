@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+from asterisk.agi import *
+import sqlite3
+import sys
+
+path_sqlite3db='/var/lib/asterisk/telefonbuch.db'
+
+agi = AGI()
+ext_number = agi.env['agi_callerid']
+agi.verbose("%s ruft an!" % ext_number)
+connection = sqlite3.connect('%s' % path_sqlite3db)
+result_displayname = connection.execute("SELECT DisplayName FROM TELEFONBUCH WHERE Number = %s;" % ext_number)
+result_companyname = connection.execute("SELECT Company FROM TELEFONBUCH WHERE Number = %s;" % ext_number)
+
+result_query_displayname=result_displayname.fetchall()
+result_query_companyname=result_companyname.fetchone()
+connection.close() 
+
+if len(result_query_displayname) >= 2:
+    agi.verbose("Folgende Kontakte haben die selbe Telefonnummer: '%s', d.h. Der Firmenname '%s' wird genutzt:" % (ext_number,result_query_companyname[0]))
+    agi.set_variable("CALLERID(name)", 'Firma:' +result_query_companyname[0])
+    for name in result_query_displayname:
+        agi.verbose("Kontakt: %s" % name)
+else:
+    agi.set_variable("CALLERID(name)", result_query_displayname[0][0])
+
